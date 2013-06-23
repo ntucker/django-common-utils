@@ -1,4 +1,4 @@
-from __future__ import unicode_literals
+from __future__ import unicode_literals, print_function
 
 import re
 import logging
@@ -20,7 +20,11 @@ logger = logging.getLogger(__name__)
 
 class QueryDebuggerMiddleware(object):
     def process_response(self, request, response):
-        pprint(connection.queries)
+        print("[")
+        for query in connection.queries:
+            line = " ".join((query['sql'], 'in', query['time'])).encode("ascii", errors="replace")
+            print("  ", line)
+        print("]")
         return response
 
 

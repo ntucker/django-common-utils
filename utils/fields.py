@@ -11,12 +11,13 @@ psycopg2.extras.register_uuid()
 
 class UUIDField(six.with_metaclass(models.SubfieldBase, models.Field)):
     def __init__(self, *args, **kwargs):
-        auto = kwargs.get('auto', False)
-        if auto or kwargs.get('primary_key', False):
+        self.auto = kwargs.get('auto', False)
+        if self.auto or kwargs.get('primary_key', False):
             kwargs['editable'] = False
             kwargs['blank'] = True
             kwargs['unique'] = True
-        if auto:
+        if self.auto:
+            print("WARNING")
             kwargs['default'] = uuid.uuid4
         super(UUIDField, self).__init__(*args, **kwargs)
 
@@ -49,7 +50,7 @@ try:
               (UUIDField,),
               [],
               {
-               "auto": ["auto", {"default": True}],
+               "auto": ["auto", {"default": False}],
                "default": ["default", {"ignore_if": 'auto'}],
                },
               )
