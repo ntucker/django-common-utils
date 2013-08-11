@@ -22,7 +22,7 @@ class QueryDebuggerMiddleware(object):
     def process_response(self, request, response):
         print("[")
         for query in connection.queries:
-            line = " ".join((query['sql'], 'in', query['time'])).encode("ascii", errors="replace")
+            line = " ".join((query['sql'] or "", 'in', query['time'])).encode("ascii", errors="replace")
             print("  ", line)
         print("]")
         return response
