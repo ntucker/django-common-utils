@@ -53,6 +53,12 @@ class VaryOnBots(object):
             patch_vary_headers(response, ("User-Agent",))
         return response
 
+class VaryOnAjax(object):
+    def process_response(self, request, response):
+        if request.is_ajax():
+            patch_vary_headers(response, ("X-Requested-With",))
+        return response
+
 
 class RemoveCookieVaryHeader(object):
     def process_response(self, request, response):
