@@ -5,6 +5,7 @@ import psycopg2.extras, psycopg2.extensions
 
 from django import forms
 from django.db import models
+from django.db.models.fields import AutoField
 from django.core.exceptions import ValidationError
 from django.forms.util import from_current_timezone
 
@@ -32,6 +33,9 @@ class UUIDField(six.with_metaclass(models.SubfieldBase, models.Field)):
         if isinstance(value, uuid.UUID):
             return str(value)
         return value
+    
+    def get_prep_value(self, value):
+        return value
 
     def to_python(self, value):
         if not value:
@@ -40,11 +44,15 @@ class UUIDField(six.with_metaclass(models.SubfieldBase, models.Field)):
             value = uuid.UUID(value)
         return value
 
+class AutoUUIDField(UUIDField, AutoField):
+    """Make sure to execute db.execute("ALTER TABLE appname_modelname ALTER COLUMN id SET DEFAULT uuid_generate_v4();")"""
+    def __init__(self, *args, **kwargs):
+        kwargs['primary_key'] = True
+        kwargs['default'] = None
+        super(AutoUUIDField, self).__init__(*args, **kwargs)
+
     def contribute_to_class(self, cls, name):
-        assert not cls._meta.has_auto_field, "A model can't have more than one AutoField."
-        super(UUIDField, self).contribute_to_class(cls, name)
-        cls._meta.has_auto_field = True
-        cls._meta.auto_field = self
+        AutoField.contribute_to_class(self, cls, name)
 
 try:
     from rest_framework import serializers
@@ -106,6 +114,7 @@ try:
               )
              ]
     add_introspection_rules(rules, ["^utils\.fields\.UUIDField"])
+    add_introspection_rules(rules, ["^utils\.fields\.AutoUUIDField"])
     rules = [
              (
               (DateTimeRange,),
