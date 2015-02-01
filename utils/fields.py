@@ -5,9 +5,12 @@ import psycopg2.extras, psycopg2.extensions
 
 from django import forms
 from django.db import models
+from django.db.models import Lookup, Transform
 from django.db.models.fields import AutoField
 from django.core.exceptions import ValidationError
 from django.forms.util import from_current_timezone
+
+from djorm_pgarray.fields import ContainedByLookup, ContainsLookup, OverlapLookup, ArrayField
 
 from .widgets import DateTimeRangeWidget
 
@@ -100,6 +103,27 @@ class DateTimeRange(six.with_metaclass(models.SubfieldBase, models.Field)):
         defaults.update(kwargs)
         return super(DateTimeRange, self).formfield(**defaults)
 
+
+class LowercaseTransform(Transform):
+    lookup_name = 'array_lowercase'
+    def as_sql(self, qn, connection):
+        lhs, params = qn.compile(self.lhs)
+        return "array_lowercase(%s)" % (lhs,), params
+
+
+class SingleContainedByLookup(ContainedByLookup):
+    def as_sql(self, qn, connection):
+        lhs, lhs_params = self.process_lhs(qn, connection)
+        rhs, rhs_params = self.process_rhs(qn, connection)
+        params = lhs_params + rhs_params
+        return "ARRAY[%s] <@ %s::%s[]" % (lhs, rhs, self.lhs.output_field.db_type(connection)), params
+
+
+UUIDField.register_lookup(SingleContainedByLookup)
+DateTimeRange.register_lookup(ContainedByLookup)
+DateTimeRange.register_lookup(ContainsLookup)
+DateTimeRange.register_lookup(OverlapLookup)
+ArrayField.register_lookup(LowercaseTransform)
 
 try:
     from south.modelsinspector import add_introspection_rules
