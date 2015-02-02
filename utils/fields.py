@@ -22,12 +22,21 @@ class UUIDField(six.with_metaclass(models.SubfieldBase, models.Field)):
         self.auto = kwargs.get('auto', False)
         if self.auto or kwargs.get('primary_key', False):
             kwargs['editable'] = False
-            kwargs['blank'] = True
             kwargs['unique'] = True
         if self.auto:
-            print("WARNING")
             kwargs['default'] = uuid.uuid4
         super(UUIDField, self).__init__(*args, **kwargs)
+
+    def deconstruct(self):
+        name, path, args, kwargs = super(UUIDField, self).deconstruct()
+        if self.auto != False:
+            kwargs['auto'] = self.auto
+        if self.auto or kwargs.get('primary_key', False):
+            del kwargs['editable']
+            del kwargs['unique']
+        if self.auto:
+            del kwargs['default']
+        return name, path, args, kwargs
 
     def db_type(self, connection=None):
         return 'uuid'
@@ -47,6 +56,7 @@ class UUIDField(six.with_metaclass(models.SubfieldBase, models.Field)):
             value = uuid.UUID(value)
         return value
 
+
 class AutoUUIDField(UUIDField, AutoField):
     """Make sure to execute db.execute("ALTER TABLE appname_modelname ALTER COLUMN id SET DEFAULT uuid_generate_v4();")"""
     def __init__(self, *args, **kwargs):
@@ -54,8 +64,15 @@ class AutoUUIDField(UUIDField, AutoField):
         kwargs['default'] = None
         super(AutoUUIDField, self).__init__(*args, **kwargs)
 
+    def deconstruct(self):
+        name, path, args, kwargs = super(AutoUUIDField, self).deconstruct()
+        del kwargs['primary_key']
+        del kwargs['default']
+        return name, path, args, kwargs
+
     def contribute_to_class(self, cls, name):
         AutoField.contribute_to_class(self, cls, name)
+
 
 try:
     from rest_framework import serializers
@@ -71,6 +88,7 @@ try:
 except ImportError:
     pass
 
+
 class DateTimeRangeFormField(forms.MultiValueField):
     widget = DateTimeRangeWidget
     def __init__(self, *args, **kwargs):
@@ -82,12 +100,21 @@ class DateTimeRangeFormField(forms.MultiValueField):
             raise ValidationError('Range must end after it starts')
         return psycopg2.extras.DateTimeTZRange(data_list[0], data_list[1])
 
+
 class DateTimeRange(six.with_metaclass(models.SubfieldBase, models.Field)):
     def __init__(self, *args, **kwargs):
         self.require_lower = kwargs.pop('require_lower', False)
         self.require_upper = kwargs.pop('require_upper', False)
         super(DateTimeRange, self).__init__(*args, **kwargs)
-        
+
+    def deconstruct(self):
+        name, path, args, kwargs = super(DateTimeRange, self).deconstruct()
+        if self.require_lower != False:
+            kwargs['require_lower'] = self.require_lower
+        if self.require_lower != False:
+            kwargs['require_upper'] = self.require_upper
+        return name, path, args, kwargs
+
     def db_type(self, connection=None):
         return 'tstzrange'
 
@@ -124,31 +151,3 @@ DateTimeRange.register_lookup(ContainedByLookup)
 DateTimeRange.register_lookup(ContainsLookup)
 DateTimeRange.register_lookup(OverlapLookup)
 ArrayField.register_lookup(LowercaseTransform)
-
-try:
-    from south.modelsinspector import add_introspection_rules
-    rules = [
-             (
-              (UUIDField,),
-              [],
-              {
-               "auto": ["auto", {"default": False}],
-               "default": ["default", {"ignore_if": 'auto'}],
-               },
-              )
-             ]
-    add_introspection_rules(rules, ["^utils\.fields\.UUIDField"])
-    add_introspection_rules(rules, ["^utils\.fields\.AutoUUIDField"])
-    rules = [
-             (
-              (DateTimeRange,),
-              [],
-              {
-               "require_lower": ["require_lower", {"default": False}],
-               "require_upper": ["require_upper", {"default": False}],
-               },
-              )
-             ]
-    add_introspection_rules(rules, ["^utils\.fields\.DateTimeRange"])
-except ImportError:
-    pass
