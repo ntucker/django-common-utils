@@ -1,5 +1,5 @@
 from django import forms
-from django.forms.util import to_current_timezone
+from django.forms.utils import to_current_timezone
 
 
 class DateTimeRangeWidget(forms.MultiWidget):

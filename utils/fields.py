@@ -8,7 +8,7 @@ from django.db import models
 from django.db.models import Lookup, Transform
 from django.db.models.fields import AutoField
 from django.core.exceptions import ValidationError
-from django.forms.util import from_current_timezone
+from django.forms.utils import from_current_timezone
 
 from djorm_pgarray.fields import ContainedByLookup, ContainsLookup, OverlapLookup, ArrayField
 
