@@ -9,6 +9,7 @@ from django.db.models import Lookup, Transform
 from django.db.models.fields import AutoField
 from django.core.exceptions import ValidationError
 from django.forms.utils import from_current_timezone
+from django.utils import six, timezone
 
 from djorm_pgarray.fields import ContainedByLookup, ContainsLookup, OverlapLookup, ArrayField
 
@@ -77,14 +78,33 @@ class AutoUUIDField(UUIDField, AutoField):
 try:
     from rest_framework import serializers
     class DateTimeRangeSerializerField(serializers.DateTimeField):
-        def to_native(self, value):
-            return list(map(super(DateTimeRangeSerializerField, self).to_native, [value.lower, value.upper]))
+        def __init__(self, *args, **kwargs):
+            self.require_lower = kwargs.pop('require_lower', False)
+            self.require_upper = kwargs.pop('require_upper', False)
+            super(DateTimeRangeSerializerField, self).__init__(*args, **kwargs)
+        def to_representation(self, value):
+            return [v and super(DateTimeRangeSerializerField, self).to_representation(v) for v in [value.lower, value.upper]]
 
-        def from_native(self, data):
-            data = [from_current_timezone(super(DateTimeRangeSerializerField, self).from_native(value)) for value in data]
+        def to_internal_value(self, data):
+            data = [super(DateTimeRangeSerializerField, self).to_internal_value(value) if value else None for value in data]
+            if self.require_lower and data[0] is None:
+                raise ValidationError("Lower datetime bound must be set")
+            if self.require_upper and data[1] is None:
+                raise ValidationError("Upper datetime bound must be set")
             if data[1] is not None and data[0] > data[1]:
                 raise ValidationError('Range must end after it starts')
             return psycopg2.extras.DateTimeTZRange(data[0], data[1])
+
+        def enforce_timezone(self, value):
+            """
+            When `self.default_timezone` is `None`, always return naive datetimes.
+            When `self.default_timezone` is not `None`, always return aware datetimes.
+            """
+            if (self.default_timezone is not None) and not timezone.is_aware(value):
+                return from_current_timezone(value)
+            elif (self.default_timezone is None) and timezone.is_aware(value):
+                return timezone.make_naive(value, timezone.UTC())
+            return value
 except ImportError:
     pass
 
