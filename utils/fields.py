@@ -75,6 +75,23 @@ class AutoUUIDField(UUIDField, AutoField):
         AutoField.contribute_to_class(self, cls, name)
 
 
+class ForeignKey(models.ForeignKey):
+    def db_type(self, connection):
+        # The database column type of a ForeignKey is the column type
+        # of the field to which it points. An exception is if the ForeignKey
+        # points to an AutoField/PositiveIntegerField/PositiveSmallIntegerField,
+        # in which case the column type is simply that of an IntegerField.
+        # If the database needs similar types for key fields however, the only
+        # thing we can do is making AutoField an IntegerField.
+        rel_field = self.related_field
+        if ((isinstance(rel_field, AutoField) and not isinstance(rel_field, AutoUUIDField)) or
+                (not connection.features.related_fields_match_type and
+                isinstance(rel_field, (models.PositiveIntegerField,
+                                       models.PositiveSmallIntegerField)))):
+            return models.IntegerField().db_type(connection=connection)
+        return rel_field.db_type(connection=connection)
+
+
 try:
     from rest_framework import serializers
     class DateTimeRangeSerializerField(serializers.DateTimeField):
