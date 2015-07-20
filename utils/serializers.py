@@ -20,3 +20,16 @@ class BaseModelSerializer(serializers.HyperlinkedModelSerializer):
         return (
             [model_info.pk.name] + super(BaseModelSerializer, self).get_default_field_names(declared_fields, model_info)
         )
+
+    def build_standard_field(self, field_name, model_field):
+        """
+        Create regular model fields.
+        """
+        field_class, field_kwargs = super(BaseModelSerializer, self).build_standard_field(field_name, model_field)
+        
+        if field_class == HTMLSerializerField:
+            for k in field_class.KWARG:
+                if hasattr(model_field, k):
+                    field_kwargs[k] = getattr(model_field, k)
+
+        return field_class, field_kwargs
