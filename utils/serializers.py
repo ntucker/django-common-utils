@@ -5,7 +5,7 @@ from utils.fields import DateTimeRange, DateTimeRangeSerializerField, AutoUUIDFi
 from aloha.fields import HTMLField, HTMLSerializerField
 
 
-class BaseModelSerializer(serializers.HyperlinkedModelSerializer):
+class BaseModelSerializerMixin(object):
     serializer_field_mapping = dict(serializers.HyperlinkedModelSerializer.serializer_field_mapping.items() + {DateTimeRange: DateTimeRangeSerializerField,
                                                                                                                AutoUUIDField: serializers.UUIDField,
                                                                                                                HTMLField: HTMLSerializerField,
@@ -18,14 +18,14 @@ class BaseModelSerializer(serializers.HyperlinkedModelSerializer):
         `Meta.fields` option is not specified.
         """
         return (
-            [model_info.pk.name] + super(BaseModelSerializer, self).get_default_field_names(declared_fields, model_info)
+            [model_info.pk.name] + super(BaseModelSerializerMixin, self).get_default_field_names(declared_fields, model_info)
         )
 
     def build_standard_field(self, field_name, model_field):
         """
         Create regular model fields.
         """
-        field_class, field_kwargs = super(BaseModelSerializer, self).build_standard_field(field_name, model_field)
+        field_class, field_kwargs = super(BaseModelSerializerMixin, self).build_standard_field(field_name, model_field)
         
         if field_class == HTMLSerializerField:
             for k in field_class.KWARG:
@@ -33,3 +33,6 @@ class BaseModelSerializer(serializers.HyperlinkedModelSerializer):
                     field_kwargs[k] = getattr(model_field, k)
 
         return field_class, field_kwargs
+
+class BaseModelSerializer(BaseModelSerializerMixin, serializers.HyperlinkedModelSerializer):
+    pass
