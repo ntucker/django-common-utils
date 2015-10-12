@@ -19,6 +19,7 @@ psycopg2.extras.register_uuid()
 
 
 class UUIDField(six.with_metaclass(models.SubfieldBase, models.Field)):
+    """Deprecated in Django 1.8 - use built in type"""
     def __init__(self, *args, **kwargs):
         self.auto = kwargs.get('auto', False)
         if self.auto or kwargs.get('primary_key', False):
@@ -51,11 +52,13 @@ class UUIDField(six.with_metaclass(models.SubfieldBase, models.Field)):
         return value
 
     def to_python(self, value):
+        if isinstance(value, uuid.UUID):
+            return value
+
         if not value:
             return None
-        if not isinstance(value, uuid.UUID):
-            value = uuid.UUID(value)
-        return value
+
+        return uuid.UUID(value)
 
 
 class AutoUUIDField(UUIDField, AutoField):
@@ -63,15 +66,23 @@ class AutoUUIDField(UUIDField, AutoField):
     def __init__(self, *args, **kwargs):
         kwargs['primary_key'] = True
         kwargs['default'] = None
+        kwargs['editable'] = False
+        kwargs['blank'] = True
         super(AutoUUIDField, self).__init__(*args, **kwargs)
 
     def deconstruct(self):
         name, path, args, kwargs = super(AutoUUIDField, self).deconstruct()
-        del kwargs['primary_key']
-        del kwargs['default']
+        if 'primary_key' in kwargs:
+            del kwargs['primary_key']
+        if 'default' in kwargs:
+            del kwargs['default']
+        if 'editable' in kwargs:
+            del kwargs['editable']
+        if 'blank' in kwargs:
+            del kwargs['blank']
         return name, path, args, kwargs
 
-    def contribute_to_class(self, cls, name):
+    def contribute_to_class(self, cls, name, **kwargs):
         AutoField.contribute_to_class(self, cls, name)
 
 
@@ -139,6 +150,7 @@ class DateTimeRangeFormField(forms.MultiValueField):
 
 
 class DateTimeRange(six.with_metaclass(models.SubfieldBase, models.Field)):
+    """Deprecated in Django 1.8 - use built in type"""
     def __init__(self, *args, **kwargs):
         self.require_lower = kwargs.pop('require_lower', False)
         self.require_upper = kwargs.pop('require_upper', False)

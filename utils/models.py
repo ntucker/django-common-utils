@@ -1,5 +1,7 @@
 from __future__ import unicode_literals
 
+import uuid
+
 from django.contrib.contenttypes.models import ContentType
 from django.core import urlresolvers
 from django.db import models
@@ -20,7 +22,7 @@ class UUIDModel(models.Model):
     """Provides UIID primary key
     Make sure to execute db.execute("ALTER TABLE appname_modelname ALTER COLUMN id SET DEFAULT uuid_generate_v4();")
     """
-    id = AutoUUIDField("id")
+    id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
 
     class Meta:
         abstract = True
