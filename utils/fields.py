@@ -11,6 +11,7 @@ from django.core.exceptions import ValidationError
 from django.forms.utils import from_current_timezone
 from django.utils import six, timezone
 
+from django.contrib.postgres.fields import ArrayField as NativeArrayField 
 from djorm_pgarray.fields import ContainedByLookup, ContainsLookup, OverlapLookup, ArrayField
 
 from .widgets import DateTimeRangeWidget
@@ -200,3 +201,4 @@ DateTimeRange.register_lookup(ContainedByLookup)
 DateTimeRange.register_lookup(ContainsLookup)
 DateTimeRange.register_lookup(OverlapLookup)
 ArrayField.register_lookup(LowercaseTransform)
+NativeArrayField.register_lookup(LowercaseTransform)
